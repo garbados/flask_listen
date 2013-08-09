@@ -5,6 +5,7 @@ import json
 import requests
 import os
 from config import Config
+from urllib import urlencode
 
 class CloudantListener(StreamListener):
     """ 
@@ -23,6 +24,24 @@ class CloudantListener(StreamListener):
                 "geo": tweet['geo'],
                 "coordinates": tweet['coordinates']
                 }
+            # normalize geodata
+            if 'geo' in tweet_data:
+                query = urlencode({
+                    "username": Config.geo_user,
+                    "lat": tweet_data['geo']['coordinates'][0],
+                    "long": tweet_data['geo']['coordinates'][1],
+                    })
+            elif 'coordinates' in tweet_data:
+                query = urlencode({
+                    "username": Config.geo_user,
+                    "lat": tweet_data['coordinates']['coordinates'][1],
+                    "long": tweet_data['coordinates']['coordinates'][0],
+                    })
+            if tweet_data.get('geo') or tweet_data.get('coordinates'):
+                url = '?'.join([Config.geo_url, query])
+                r = requests.get(url)
+                print r.json()
+                tweet_data.update(r.json())
             # insert to database
             r = requests.post(Config.db_url, data=json.dumps(tweet_data), headers={"Content-Type":"application/json"})
             if r.status_code == 409:

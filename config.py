@@ -17,3 +17,6 @@ class Config(object):
     "pass": os.environ['CLOUDANT_PASS'],
     "db": os.environ['CLOUDANT_DB']
     })
+
+  geo_url = "http://api.geonames.org/countrySubdivisionJSON"
+  geo_user = "garbados"
