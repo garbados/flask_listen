@@ -1,15 +1,9 @@
 import flask
 import requests
 import os
-from listen import listen
 from config import Config
-from multiprocessing import Process
 
 app = flask.Flask(__name__)
-
-# spawn the listener as a process so it doesn't block our server
-p = Process(target=listen)
-p.start()
 
 @app.route('/count')
 def count():
