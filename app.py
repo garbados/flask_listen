@@ -22,4 +22,4 @@ def index():
     return flask.render_template('index.html')
 
 if __name__ == '__main__':
-	app.run(port=os.environ.get('PORT', 5000))
+	app.run(port=int(os.environ.get('PORT', 5000)))
