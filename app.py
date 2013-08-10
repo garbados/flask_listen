@@ -13,7 +13,10 @@ def count():
 
 @app.route('/')
 def index():
-    return flask.render_template('index.html')
+    url = '/'.join([Config.db_url, '_all_docs']) + '?limit=0'
+    r = requests.get(url)
+    count = r.json()['total_rows']
+    return flask.render_template('index.html', count=count)
 
 if __name__ == '__main__':
   port = int(os.environ.get('PORT', 5000))
