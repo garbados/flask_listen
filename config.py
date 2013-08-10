@@ -11,7 +11,7 @@ class Config(object):
   access_token = os.environ['TWITTER_ACCESS_KEY']
   access_token_secret = os.environ['TWITTER_ACCESS_SECRET']
 
-  Database credentials
+  # Database credentials
   db_url = "https://{user}:{pass}@{user}.cloudant.com/{db}".format(**{
     "user": os.environ['CLOUDANT_USER'],
     "pass": os.environ['CLOUDANT_PASS'],
