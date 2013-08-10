@@ -4,6 +4,7 @@ from tweepy import Stream
 import json
 import requests
 import os
+import time
 from config import Config
 from urllib import urlencode
 
@@ -16,38 +17,41 @@ class CloudantListener(StreamListener):
         tweet = json.loads(data)
         if not 'delete' in tweet:
             # truncate tweet to keep db manageable
-            tweet_data = {
-                "_id": str(tweet['id']),
-                "created_at": tweet['created_at'],
-                "text": tweet['text'],
-                "lang": tweet['lang'],
-                "geo": tweet['geo'],
-                "coordinates": tweet['coordinates']
-                }
-            # normalize geodata
-            if 'geo' in tweet_data:
+            try:
+                tweet_data = {
+                    "_id": str(tweet['id']),
+                    "created_at": tweet['created_at'],
+                    "text": tweet['text'],
+                    "lang": tweet['lang'],
+                    "geo": tweet['geo'],
+                    "coordinates": tweet['coordinates']
+                    }
+            except:
+                print tweet
+                raise
+            # normalize geodata using geonames
+            if tweet_data.get('geo'):
                 query = urlencode({
                     "username": Config.geo_user,
                     "lat": tweet_data['geo']['coordinates'][0],
-                    "long": tweet_data['geo']['coordinates'][1],
+                    "lng": tweet_data['geo']['coordinates'][1],
                     })
-            elif 'coordinates' in tweet_data:
+            elif tweet_data.get('coordinates'):
                 query = urlencode({
                     "username": Config.geo_user,
                     "lat": tweet_data['coordinates']['coordinates'][1],
-                    "long": tweet_data['coordinates']['coordinates'][0],
+                    "lng": tweet_data['coordinates']['coordinates'][0],
                     })
             if tweet_data.get('geo') or tweet_data.get('coordinates'):
                 url = '?'.join([Config.geo_url, query])
                 r = requests.get(url)
-                print r.json()
                 tweet_data.update(r.json())
             # insert to database
             r = requests.post(Config.db_url, data=json.dumps(tweet_data), headers={"Content-Type":"application/json"})
             if r.status_code == 409:
                 # if revision conflict, update _rev
                 # this will happen: https://dev.twitter.com/docs/streaming-apis/processing#Duplicate_messages
-                r = requests.get('/'.join([Config.db_url, str(tweet['id'])]))
+                r = requests.get('/'.join([Config.db_url, str(tweet_data['_id'])]))
                 tweet_data['_rev'] = r.json()['_rev']
                 r = requests.post(Config.db_url, data=json.dumps(tweet_data), headers={"Content-Type":"application/json"})
             if r.status_code not in [200, 201, 202]:
@@ -63,8 +67,15 @@ def listen():
     auth = OAuthHandler(Config.consumer_key, Config.consumer_secret)
     auth.set_access_token(Config.access_token, Config.access_token_secret)
 
-    stream = Stream(auth, l)
-    stream.sample()
+    stream = Stream(auth, l, timeout=36000000)
+    def attempt_connect(wait=1):
+        try:
+            stream.sample()
+        except Exception as e:
+            print e
+            time.sleep(wait)
+            attempt_connect(wait * 2)
+    attempt_connect()
 
 if __name__ == '__main__':
     listen()

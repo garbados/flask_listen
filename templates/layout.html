@@ -2,11 +2,15 @@
 <head>
   <title>NLTK Listener</title>
   <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/custom.css') }}">
 </head>
 <body>
   {% block content %}
   {% endblock %}
   <script type="text/javascript" src="{{ url_for('static', filename='js/jquery.js') }}"></script>
+  <script src="static/js/d3.v3.min.js"></script>
+  <script src="static/js/queue.v1.min.js"></script>
+  <script src="static/js/topojson.js"></script>
   <script type="text/javascript" src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
