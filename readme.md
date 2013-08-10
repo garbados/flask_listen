@@ -55,11 +55,11 @@ I found three things:
 * Different parts of speech react to different events, such as war or shared cultural events like the televised Apollo 11 mission, which 93% of homes witnessed.
 * Language style was evolving more slowly over time until 2008, when the Great Recession hit and various parts of speech went wonky.
 
-Hey, that's pretty cool. But Google's Ngram dataset is limited to books. Do these findings hold true for other mediums?
+I thought, hey, that's pretty cool, but Google's Ngram dataset is limited to books. Do these findings hold true for other mediums?
 
 ### Why Twitter?
 
-As of May 7, 2013, Twitter users generate 9,100 thousand tweets every second. 115 million users tweet every month. That's a tremendous amount of linguistic data, from a tremendous cross-section of the global populace.
+As of May 7, 2013, Twitter users generate 9,100 tweets every second. 115 million users tweet every month. That's a tremendous amount of linguistic data, from a tremendous cross-section of the global populace.
 
 Plus, the public stream endpoint on Twitter's API lets you grab about 30% of new tweets as they're created, or about 17.4 million tweets a day, plus metadata like geo-coordinates. As a result of that endpoint, collecting tweets en masse is about as hard as falling on your face.
 
@@ -67,7 +67,7 @@ Plus, the public stream endpoint on Twitter's API lets you grab about 30% of new
 
 ### Flask Listen
 
-For Pycon Canada, I wrote [Flask Listen](https://github.com/garbados/flask_listen), a two-process web app that streams tweets into a Cloudant database, and uses Geonames. I used a modified version of Flask Listen for this talk, which is available under the PyCon branch.
+For Pycon Canada, I wrote [Flask Listen](https://github.com/garbados/flask_listen), a two-process web app that streams tweets into a Cloudant database, and uses Geonames to flesh out geo-coordinates into country names, etc. I used a modified version of Flask Listen for this talk, which is available under the PyCon branch.
 
 Here's how it works:
 
@@ -88,7 +88,7 @@ Here's how it works:
     # Tweepy code sample from `listen.py`
     def listen():
         # custom listener for getting geonames data and inserting into cloudant
-        l = CloudantListener() 
+        l = CloudantListener()
         # oauth!
         auth = OAuthHandler(Config.consumer_key, Config.consumer_secret)
         auth.set_access_token(Config.access_token, Config.access_token_secret)
@@ -259,4 +259,119 @@ With the exception of the punctuation, "RT", and "http", those are all function 
 
 ### Graphing and d3.js
 
-I promised graphs, so let there be graphs!
+[d3.js](http://d3js.org/) is a JavaScript library for making super-awesome graphs and visualizations, like Highcharts but more freeform. I'll walk you through making a simple visualization to display the size of our dataset by region. Who tweets more, Brazil or Indonesia?
+
+#### HTML
+
+In our HTML, we'll just create a div that our d3.js code will insert its wizardry into.
+
+    <div id="map"></div>
+
+We'll also want to, in some fashion, require these JavaScript dependencies:
+
+* d3.v3.min.js : The library itself
+* queue.v1.min.js : helper for retrieving resources the map will need, like place names.
+* topojson.js : library for using TopoJSONs, an extension of GeoJSON
+
+#### JavaScript
+
+First, let's set up our projection of the world.
+
+  // our world map and its dimensions / scale
+  var projection = d3.geo.mercator()
+                  .translate([480, 300])
+                  .scale(970);
+
+  // object for handling series of coordinates
+  var path = d3.geo.path()
+      .projection(projection);
+
+Now, let's add an SVG, which will contain our map and our tooltips, to the DOM.
+
+  // mapping our map to the #map DOM element
+  var svg = d3.select("#map").append("svg")
+      .attr("width", width)
+      .attr("height", height);
+
+  // set up our tooltips
+  var tooltip = d3.select("#map").append("div")
+      .attr("class", "tooltip");
+
+#### Queue
+
+Queue delays rendering the map until everything you need is present. By specifying a resource type and a URL for the resource, you can grab both static and dynamic assets. Here, I grab the TopoJSON for our world, a TSV of country names, and the results of a query to Cloudant. d3.js handles it all the same way.
+
+  // load our resources in order
+  queue()
+      // topojson of the world
+      .defer(d3.json, "static/maps/world-110m.json")
+      // TSV of nation names and their IDs
+      .defer(d3.tsv, "static/maps/world-country-names.tsv")
+      // as long as it's json, you can grab dynamic content too :O
+      .defer(d3.json, "view/geo?group_level=1&stale=ok")
+      .await(ready);
+
+#### Ready
+
+Once everything's ready, it calls `ready`, which is where most of the work happens:
+
+    function ready(error, world, names, counts_rows) {
+        ...
+    }
+
+Ready receives the results of `queue` in the order they were entered, though any error comes first.
+
+#### Data
+
+d3.js calls itself "data-driven documents." Much of the presentation logic is precisely this: taking an array of objects, and styling the SVG or parts of it accordingly. For example:
+
+    var country = svg.selectAll(".country").data(countries);
+
+    country
+      .enter()
+      .insert("path")
+      .attr("class", "country")    
+      .attr("title", function(d,i) { return d.name; })
+      .attr("d", path)
+      .style("fill", function(d, i) { 
+        return color(d.count); 
+      })
+
+The data that goes into all that? It comes from the `countries` object we attach using the `data` method. In order to get more data into the our documents, well, just attach it to `countries` -- which we do.
+
+    // attach counts to their respective countries
+    countries.forEach(function(d) { 
+      var filtered_names = names.filter(function(n) { return d.id == n.id; });
+      if(filtered_names.length) d.name = filtered_names[0].name;
+
+      if(counts[d.name]) {
+        d.count = counts[d.name];
+      }
+    });
+
+#### Color Scales
+
+Color gradients in d3.js arrive from the concept of a scale. For example, here's the color scale for our map:
+
+    var color = d3.scale.log().domain([1, most]).range(['black', 'blue']);
+
+It's a logarithmic scale that maps values between 1 and whatever the highest number of tweets in a single country is to a color between black and blue. Values like `undefined` become gray by default, visually separating them from countries with tweets.
+
+#### Final result
+
+Turns out, Indonesia tweets more. I don't know why, but we have the tools to investigate.
+
+### Wrapping up
+
+This was my first ever conference talk. Thanks for coming, guys. I hope it was sufferable. Here's what we talked about:
+
+* Language is complicated.
+* Gathering data from Twitter is painless.
+* ... but NLTK performance becomes an issue quickly.
+* d3.js makes pretty graphs easy.
+
+### Questions?
+
+If y'all have questions, I'm available for another [x] minutes, or feel free to hit me up afterwards, in person or on the interwebs. Here's my contact info: []
+
+Thanks again!
