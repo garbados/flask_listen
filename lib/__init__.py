@@ -17,8 +17,8 @@ clou = Cloudant(**{
 # test runs
 t = Timer()
 r = clou.view('nltk', 'language', stale="ok", reduce="false", key='"en"')
-print t.next()
+print "Got data in", t.next(), "seconds"
 tweets = map(word_tokenize, [row['value'] for row in r['rows']])
-print t.next()
+print "Tokenized in", t.next(), "seconds"
 print tweets[0]
 print t.sum()
