@@ -11,13 +11,12 @@ class Config(object):
   access_token = os.environ['TWITTER_ACCESS_KEY']
   access_token_secret = os.environ['TWITTER_ACCESS_SECRET']
 
-  # Database credentials
-  # db_url = "https://{user}:{pass}@{user}.cloudant.com/{db}".format(**{
-  #   "user": os.environ['CLOUDANT_USER'],
-  #   "pass": os.environ['CLOUDANT_PASS'],
-  #   "db": os.environ['CLOUDANT_DB']
-  #   })
-  db_url = "http://localhost:5984/hey_listen"
+  Database credentials
+  db_url = "https://{user}:{pass}@{user}.cloudant.com/{db}".format(**{
+    "user": os.environ['CLOUDANT_USER'],
+    "pass": os.environ['CLOUDANT_PASS'],
+    "db": os.environ['CLOUDANT_DB']
+    })
 
   geo_url = "http://api.geonames.org/countrySubdivisionJSON"
   geo_user = "garbados"
