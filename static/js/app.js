@@ -32,7 +32,7 @@ $(function(){
       .defer(d3.json, "static/maps/world-110m.json")
       .defer(d3.tsv, "static/maps/world-country-names.tsv")
       // as long as it's json, you can grab dynamic content too :O
-      .defer(d3.json, "view/geo?group_level=1")
+      .defer(d3.json, "view/geo?group_level=1&stale=ok")
       .await(ready);
 
   function ready(error, world, names, counts_rows) {
